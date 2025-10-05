@@ -1,6 +1,8 @@
 // gemini-proxy.js
 
-// **FIX 1: Use stable CommonJS require() for Netlify Functions**
+// **CRITICAL FIX:** Use the stable CommonJS require() at the top level. 
+// This guarantees Netlify's bundler correctly resolves 'node-fetch'
+// and prevents the "fetch2 is not a function" error.
 const fetch = require('node-fetch'); 
 
 export async function handler(event) {
@@ -27,7 +29,7 @@ export async function handler(event) {
 
         let apiEndpoint, finalPayload;
 
-        // --- FIX 2: Logic to select endpoint based on ALL apiType values ---
+        // --- Logic to select endpoint based on ALL apiType values ---
         if (apiType === 'text_search' || apiType === 'title_gen' || apiType === 'tts') {
             // All these use the standard generateContent endpoint
             apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
@@ -35,18 +37,18 @@ export async function handler(event) {
         } else if (apiType === 'image_gen') {
             // This uses the generateImages endpoint (Imagen API)
             apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateImages?key=${API_KEY}`;
-            // FIX 3: Imagen API requires specific top-level keys
+            // Imagen API requires specific top-level keys
             finalPayload = { 
                 instances: geminiPayload.instances, 
                 parameters: geminiPayload.parameters
             };
         } 
         else {
-             // This fallback should rarely be hit now
              return { statusCode: 400, body: JSON.stringify({ error: "Invalid apiType specified." }) };
         }
         
         // 2. Call the external Google API endpoint
+        // 'fetch' is now correctly resolved here from the top-level require
         const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
