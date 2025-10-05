@@ -1,14 +1,10 @@
 // gemini-proxy.js
 
-// **CRITICAL FIX:** Use the stable CommonJS require() at the top level. 
-// This avoids the 'fetch2 is not a function' error.
+// **FIX 1: Use stable CommonJS require() for Netlify Functions**
 const fetch = require('node-fetch'); 
 
-// Use ES Module exports for better compatibility with modern Netlify Functions (Lambda).
 export async function handler(event) {
     
-    // **REMOVE: const { default: fetch } = await import('node-fetch');** // The 'fetch' variable is already available from the require() at the top.
-
     // Read the API Key securely from Netlify's environment settings
     const API_KEY = process.env.GEMINI_API_KEY;
 
@@ -22,7 +18,6 @@ export async function handler(event) {
     }
 
     try {
-        // Parse the data sent from your frontend
         const clientPayload = JSON.parse(event.body); 
         const { apiType, model, ...geminiPayload } = clientPayload; 
 
@@ -32,17 +27,26 @@ export async function handler(event) {
 
         let apiEndpoint, finalPayload;
 
-        // --- Logic to select endpoint based on apiType ---
-        if (apiType === 'chat') {
+        // --- FIX 2: Logic to select endpoint based on ALL apiType values ---
+        if (apiType === 'text_search' || apiType === 'title_gen' || apiType === 'tts') {
+            // All these use the standard generateContent endpoint
             apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
             finalPayload = geminiPayload; 
+        } else if (apiType === 'image_gen') {
+            // This uses the generateImages endpoint (Imagen API)
+            apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateImages?key=${API_KEY}`;
+            // FIX 3: Imagen API requires specific top-level keys
+            finalPayload = { 
+                instances: geminiPayload.instances, 
+                parameters: geminiPayload.parameters
+            };
         } 
         else {
+             // This fallback should rarely be hit now
              return { statusCode: 400, body: JSON.stringify({ error: "Invalid apiType specified." }) };
         }
         
-        // 2. Call the external Gemini API endpoint
-        // 'fetch' is now correctly resolved here
+        // 2. Call the external Google API endpoint
         const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -51,7 +55,6 @@ export async function handler(event) {
 
         // Error handling
         if (!response.ok) {
-            // ... (rest of the error handling logic)
             const errorText = await response.text();
             
             let errorDetails;
@@ -63,7 +66,7 @@ export async function handler(event) {
 
             return {
                 statusCode: response.status,
-                body: JSON.stringify({ error: `Gemini API returned status ${response.status}`, details: errorDetails })
+                body: JSON.stringify({ error: `Google API returned status ${response.status}`, details: errorDetails })
             };
         }
 
@@ -80,7 +83,6 @@ export async function handler(event) {
         };
         
     } catch (error) {
-        // This will now catch other errors, not the fetch import issue
         console.error("Gemini Proxy Execution Error:", error.message);
         return {
             statusCode: 500,
