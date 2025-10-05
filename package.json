@@ -6,6 +6,6 @@
     "node-fetch": "^3.0.0" 
   },
   "scripts": {
-    "build": "echo 'No build step required for static site.'"
+    "build": "echo 'No static build needed.'"
   }
 }
