@@ -1,2 +1,11 @@
 [build]
-functions = "netlify/functions"
+  # 1. THE BUILD COMMAND: Tells Netlify which script to run to build your site.
+  # Use the exact command that works locally, usually defined in package.json.
+  command = "npm run build"
+  
+  # 2. THE PUBLISH DIRECTORY: Tells Netlify where the completed static files are located.
+  # This is the output folder from your build command (e.g., 'build' for Create-React-App, 'dist' for Vue/Vite).
+  publish = "build" 
+  
+  # 3. FUNCTIONS DIRECTORY: This is correct, but only necessary if your chatbot uses serverless functions.
+  functions = "netlify/functions"
