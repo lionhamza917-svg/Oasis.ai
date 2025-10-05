@@ -1,9 +1,9 @@
 [build]
-  # Satisfies the npm run build command, which must exist.
-  command = "echo 'No static build needed.'" 
-
-  # Set publish directory to the repository root since your files (index.html, script.js) are there.
+  # Uses the dummy script added in package.json
+  command = "npm run build"
+  
+  # Tells Netlify to serve files from the root directory
   publish = "." 
   
-  # Directory where Netlify will look for and build your serverless functions.
+  # Confirms where your Netlify Function (gemini-proxy.js) is located
   functions = "netlify/functions"
