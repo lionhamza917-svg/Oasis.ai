@@ -8,7 +8,6 @@ export async function handler(event) {
   }
 
   if (!API_KEY) {
-    console.error("❌ Missing GEMINI_API_KEY");
     return { statusCode: 500, body: "Missing GEMINI_API_KEY." };
   }
 
@@ -19,34 +18,19 @@ export async function handler(event) {
     let endpoint = "";
     let cleanedPayload = {};
 
+    // ✅ Choose correct endpoint based on apiType
     switch (apiType) {
       case "chat":
       case "text_search":
       case "title_gen":
       case "tts":
         endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
-
-        // Flatten misplaced fields
-        let sysInstr = null,
-          tools = null;
-        if (rawPayload.generationConfig?.systemInstruction) {
-          sysInstr = rawPayload.generationConfig.systemInstruction;
-          delete rawPayload.generationConfig.systemInstruction;
-        }
-        if (rawPayload.generationConfig?.tools) {
-          tools = rawPayload.generationConfig.tools;
-          delete rawPayload.generationConfig.tools;
-        }
-
         cleanedPayload = {
           contents: rawPayload.contents || [],
           generationConfig: rawPayload.generationConfig || {},
         };
-        if (sysInstr) cleanedPayload.systemInstruction = sysInstr;
-        if (tools) cleanedPayload.tools = tools;
         if (rawPayload.systemInstruction)
           cleanedPayload.systemInstruction = rawPayload.systemInstruction;
-        if (rawPayload.tools) cleanedPayload.tools = rawPayload.tools;
         break;
 
       case "image_gen":
@@ -61,8 +45,6 @@ export async function handler(event) {
         };
     }
 
-    console.log("➡️ Requesting:", endpoint);
-
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -72,7 +54,7 @@ export async function handler(event) {
     const text = await response.text();
 
     if (!response.ok) {
-      console.error("❗ Gemini API error:", response.status, text);
+      console.error("Gemini API error:", response.status, text);
       return {
         statusCode: response.status,
         body: JSON.stringify({ error: "Gemini API error", details: text }),
@@ -88,7 +70,6 @@ export async function handler(event) {
       body: text,
     };
   } catch (err) {
-    console.error("💥 Proxy Error:", err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "Server error", details: err.message }),
