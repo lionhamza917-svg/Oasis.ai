@@ -1,11 +1,9 @@
 // gemini-proxy.js
 
-// **CRITICAL FIX:** Use the stable CommonJS require() at the top level. 
-// This guarantees Netlify's bundler correctly resolves 'node-fetch'
-// and prevents the "fetch2 is not a function" error.
-const fetch = require('node-fetch'); 
+// **FIX 1: Use the stable CommonJS require() at the top level.** const fetch = require('node-fetch'); 
 
-export async function handler(event) {
+// **FIX 2: Use the stable CommonJS handler export format.**
+exports.handler = async function (event, context) {
     
     // Read the API Key securely from Netlify's environment settings
     const API_KEY = process.env.GEMINI_API_KEY;
@@ -48,7 +46,6 @@ export async function handler(event) {
         }
         
         // 2. Call the external Google API endpoint
-        // 'fetch' is now correctly resolved here from the top-level require
         const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
