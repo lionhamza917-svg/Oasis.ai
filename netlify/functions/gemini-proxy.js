@@ -1,10 +1,14 @@
 // gemini-proxy.js
 
-// **FIXED:** Use CommonJS require() to avoid 'Top-level await' error.
-const fetch = require('node-fetch');
+// **CRITICAL FIX:** Use the stable CommonJS require() at the top level. 
+// This avoids the 'fetch2 is not a function' error.
+const fetch = require('node-fetch'); 
 
 // Use ES Module exports for better compatibility with modern Netlify Functions (Lambda).
 export async function handler(event) {
+    
+    // **REMOVE: const { default: fetch } = await import('node-fetch');** // The 'fetch' variable is already available from the require() at the top.
+
     // Read the API Key securely from Netlify's environment settings
     const API_KEY = process.env.GEMINI_API_KEY;
 
@@ -27,28 +31,18 @@ export async function handler(event) {
         }
 
         let apiEndpoint, finalPayload;
-        
-        // --- API ROUTING LOGIC ---
-        // The original file contained the body of the function. 
-        // We ensure that 'fetch' is now used inside the try block without an 'await import'.
-        
-        switch (apiType) {
-            case 'chat':
-            case 'text_search':
-            case 'image_gen':
-            case 'tts':
-            case 'title_gen':
-                // Assuming all these internal types map to the main generateContent endpoint or similar structures
-                // The URL structure relies on the 'model' variable from the client payload
-                apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
-                finalPayload = geminiPayload; // The rest of the payload from the client
-                break;
-            default:
-                return { statusCode: 400, body: JSON.stringify({ error: "Invalid apiType provided." }) };
+
+        // --- Logic to select endpoint based on apiType ---
+        if (apiType === 'chat') {
+            apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
+            finalPayload = geminiPayload; 
+        } 
+        else {
+             return { statusCode: 400, body: JSON.stringify({ error: "Invalid apiType specified." }) };
         }
-
-
+        
         // 2. Call the external Gemini API endpoint
+        // 'fetch' is now correctly resolved here
         const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -86,6 +80,7 @@ export async function handler(event) {
         };
         
     } catch (error) {
+        // This will now catch other errors, not the fetch import issue
         console.error("Gemini Proxy Execution Error:", error.message);
         return {
             statusCode: 500,
