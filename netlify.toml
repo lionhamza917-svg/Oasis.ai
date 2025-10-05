@@ -1,9 +1,9 @@
 [build]
-  # Uses the dummy script added in package.json
+  # We still use 'npm run build' because we added a dummy script in package.json
   command = "npm run build"
   
-  # Tells Netlify to serve files from the root directory
+  # Set publish directory to the repository root since index.html is here
   publish = "." 
   
-  # Confirms where your Netlify Function (gemini-proxy.js) is located
+  # Directory where Netlify finds your serverless functions
   functions = "netlify/functions"
