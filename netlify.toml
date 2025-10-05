@@ -1,17 +1,13 @@
 [build]
-  # 1. Runs npm install (installs node-fetch) AND runs your dummy build script.
+  # This command installs 'node-fetch' and runs your dummy build script.
   command = "npm install && npm run build" 
   
-  # Set publish directory to the repository root where index.html is located
+  # Sets the publish directory to the root where index.html is located.
   publish = "." 
   
-  # Directory where Netlify finds your serverless functions
+  # Directory where Netlify finds your serverless functions.
   functions = "netlify/functions"
-  
-# Optional: Ensure API Key is recognized as a variable to be included in the build environment
-[build.environment]
-  GEMINI_API_KEY = "$GEMINI_API_KEY"
 
 [functions]
-  # 2. Use the correct setting to ensure 'esbuild' bundles the functions.
+  # Ensures the function is bundled correctly.
   node_bundler = "esbuild"
