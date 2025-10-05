@@ -8,7 +8,7 @@ export async function handler(event) {
   }
 
   if (!API_KEY) {
-    console.error("❌ Missing Gemini API key!");
+    console.error("❌ Missing GEMINI_API_KEY");
     return { statusCode: 500, body: "Missing GEMINI_API_KEY." };
   }
 
@@ -19,16 +19,16 @@ export async function handler(event) {
     let endpoint = "";
     let cleanedPayload = {};
 
-    // 🧭 Route by apiType
     switch (apiType) {
       case "chat":
       case "text_search":
       case "title_gen":
       case "tts":
-        endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${API_KEY}`;
+        endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
 
         // Flatten misplaced fields
-        let sysInstr = null, tools = null;
+        let sysInstr = null,
+          tools = null;
         if (rawPayload.generationConfig?.systemInstruction) {
           sysInstr = rawPayload.generationConfig.systemInstruction;
           delete rawPayload.generationConfig.systemInstruction;
@@ -44,7 +44,8 @@ export async function handler(event) {
         };
         if (sysInstr) cleanedPayload.systemInstruction = sysInstr;
         if (tools) cleanedPayload.tools = tools;
-        if (rawPayload.systemInstruction) cleanedPayload.systemInstruction = rawPayload.systemInstruction;
+        if (rawPayload.systemInstruction)
+          cleanedPayload.systemInstruction = rawPayload.systemInstruction;
         if (rawPayload.tools) cleanedPayload.tools = rawPayload.tools;
         break;
 
@@ -61,45 +62,23 @@ export async function handler(event) {
     }
 
     console.log("➡️ Requesting:", endpoint);
-    console.log("Payload:", JSON.stringify(cleanedPayload, null, 2));
 
-    // ✅ STREAMING RESPONSE SUPPORT
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(cleanedPayload),
     });
 
+    const text = await response.text();
+
     if (!response.ok) {
-      const text = await response.text();
-      console.error("❗ Gemini error:", response.status, text);
+      console.error("❗ Gemini API error:", response.status, text);
       return {
         statusCode: response.status,
         body: JSON.stringify({ error: "Gemini API error", details: text }),
       };
     }
 
-    // Detect streaming responses
-    if (response.headers.get("content-type")?.includes("application/x-ndjson")) {
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let result = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        result += decoder.decode(value, { stream: true });
-      }
-      return {
-        statusCode: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-        body: result,
-      };
-    }
-
-    const text = await response.text();
     return {
       statusCode: 200,
       headers: {
