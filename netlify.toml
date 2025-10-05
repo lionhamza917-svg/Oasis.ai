@@ -1,9 +1,19 @@
 [build]
-  # We still use 'npm run build' because we added a dummy script in package.json
-  command = "npm run build"
+  # 1. Explicitly run 'npm install' before the 'npm run build' script
+  # This ensures 'node-fetch' is in node_modules before the function is bundled.
+  command = "npm install && npm run build" 
   
   # Set publish directory to the repository root since index.html is here
   publish = "." 
   
   # Directory where Netlify finds your serverless functions
   functions = "netlify/functions"
+  
+[functions]
+  # Set the bundler to esbuild and the correct Node.js target for Netlify Functions (Lambda)
+  node_bundler = "esbuild"
+  node_target = "es2020" 
+
+# Optional: Ensure API Key is recognized as a variable to be included in the build environment
+[build.environment]
+  GEMINI_API_KEY = "$GEMINI_API_KEY"
