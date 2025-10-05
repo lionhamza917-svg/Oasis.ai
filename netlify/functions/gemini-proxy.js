@@ -1,7 +1,6 @@
 // netlify/functions/gemini-proxy.js
-
 export async function handler(event) {
-  const { default: fetch } = await import('node-fetch');
+  const { default: fetch } = await import("node-fetch");
   const API_KEY = process.env.GEMINI_API_KEY;
 
   if (event.httpMethod !== "POST" || !event.body) {
@@ -12,7 +11,7 @@ export async function handler(event) {
   }
 
   if (!API_KEY) {
-    console.error("❌ Missing Gemini API key in environment!");
+    console.error("❌ Missing Gemini API key in environment variables.");
     return {
       statusCode: 500,
       body: "Server missing GEMINI_API_KEY.",
@@ -26,7 +25,7 @@ export async function handler(event) {
     let endpoint = "";
     let cleanedPayload = {};
 
-    // 🧭 Route the request based on type
+    // 🧭 Route request to correct endpoint
     switch (apiType) {
       case "chat":
       case "text_search":
@@ -34,18 +33,36 @@ export async function handler(event) {
       case "tts":
         endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
 
-        // 🧹 Sanitize payload for Gemini
+        // 🧹 Extract misplaced fields (systemInstruction & tools)
+        let sysInstr = null;
+        let tools = null;
+
+        if (rawPayload.generationConfig?.systemInstruction) {
+          sysInstr = rawPayload.generationConfig.systemInstruction;
+          delete rawPayload.generationConfig.systemInstruction;
+        }
+
+        if (rawPayload.generationConfig?.tools) {
+          tools = rawPayload.generationConfig.tools;
+          delete rawPayload.generationConfig.tools;
+        }
+
+        // 🧩 Build valid Gemini payload
         cleanedPayload = {
           contents: rawPayload.contents || [],
+          generationConfig: rawPayload.generationConfig || {},
         };
-        if (rawPayload.generationConfig) cleanedPayload.generationConfig = rawPayload.generationConfig;
+
         if (rawPayload.systemInstruction) cleanedPayload.systemInstruction = rawPayload.systemInstruction;
         if (rawPayload.tools) cleanedPayload.tools = rawPayload.tools;
+        if (sysInstr) cleanedPayload.systemInstruction = sysInstr;
+        if (tools) cleanedPayload.tools = tools;
         break;
 
       case "image_gen":
+        // Imagen endpoint for image generation
         endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${API_KEY}`;
-        cleanedPayload = rawPayload; // Imagen expects a slightly different schema
+        cleanedPayload = rawPayload;
         break;
 
       default:
@@ -56,11 +73,11 @@ export async function handler(event) {
         };
     }
 
-    // 🧾 Log what’s being sent (appears in Netlify logs)
-    console.log("➡️ Sending to Gemini API:", endpoint);
+    // 🧾 Log payload for debugging
+    console.log("➡️ Sending to Gemini:", endpoint);
     console.log("🧩 Payload:", JSON.stringify(cleanedPayload, null, 2));
 
-    // 🔗 Send request to Gemini API
+    // 🔗 Forward the cleaned request to Gemini
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -69,9 +86,8 @@ export async function handler(event) {
 
     const responseText = await response.text();
 
-    // 🧱 Handle errors from Gemini
     if (!response.ok) {
-      console.error("❗ Gemini API returned error:", response.status, responseText);
+      console.error("❗ Gemini API error:", response.status, responseText);
       return {
         statusCode: response.status,
         body: JSON.stringify({
@@ -82,7 +98,7 @@ export async function handler(event) {
       };
     }
 
-    // ✅ Success
+    // ✅ Success: return Gemini’s response
     return {
       statusCode: 200,
       headers: {
