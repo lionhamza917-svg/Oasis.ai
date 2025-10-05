@@ -1,0 +1,8 @@
+{
+  "name": "your-oasis-project",
+  "version": "1.0.0",
+  "description": "Project for the Oasis AI chat application.",
+  "dependencies": {
+    "node-fetch": "^3.0.0" 
+  }
+}
